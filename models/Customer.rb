@@ -46,8 +46,8 @@ class Customer
 
   def films
     sql = 'SELECT films.* FROM films
-    INNER JOIN tickets
-    on films.id = tickets.film_id
+    INNER JOIN screenings ON films.id = screenings.film_id
+    INNER JOIN tickets ON tickets.screening_id = screenings.id
     WHERE tickets.customer_id = $1
     ORDER BY films.title;'
     values = [@id]
@@ -55,20 +55,24 @@ class Customer
   end
 
   def film_count
-    sql = 'SELECT COUNT(films.*) FROM films
-    INNER JOIN tickets
-    on films.id = tickets.film_id
-    WHERE tickets.customer_id = $1;'
+    sql = 'SELECT COUNT(id) FROM tickets
+        WHERE customer_id = $1;'
     values = [@id]
     return SQLRunner.execute(sql, values).first['count'].to_i
   end
 
-  def buy_ticket(the_film)
-    return nil if @funds < the_film.price
+  def buy_ticket(the_screening)
+    film_price = Film.find_film_price(the_screening.film_id)
+    tickets_already_sold = Ticket.count_screening_sales(the_screening.id)
+
+    return nil if the_screening.seats <= tickets_already_sold
+    return nil if @funds < film_price
     #check if tickets available
-    @funds -= the_film.price
-    the_ticket = Ticket.new({'customer_id' => @id, 'film_id' => the_film.id})
-    the_ticket.save()
+    @funds -= film_price
+    @funds = @funds.round(2)
+ # binding.pry
+    the_ticket = Ticket.new({'customer_id' => @id, 'screening_id' => the_screening.id})
+    the_ticket.id = the_ticket.save()
     update()
     return the_ticket
   end

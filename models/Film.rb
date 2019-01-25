@@ -25,6 +25,12 @@ class Film
     SQLRunner.execute(sql)
   end
 
+  def self.find_film_price(film_id)
+    sql = 'SELECT films.price FROM films WHERE films.id = $1;'
+    values = [film_id]
+    return SQLRunner.execute(sql, values).first['price'].to_f.round(2)
+  end
+
   def save
     sql = 'INSERT INTO films (title, price) values ( $1, $2) RETURNING id;'
     values = [@title, @price]
